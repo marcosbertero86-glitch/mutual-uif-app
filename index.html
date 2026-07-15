@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Sistema de Control de Cumplimiento UIF - Mutual</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #f3f4f6;
+            color: #1f2937;
+        }
+        header {
+            background-color: #1e3a8a;
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 4px solid #3b82f6;
+        }
+        header h1 {
+            margin: 0;
+            font-size: 18pt;
+            font-weight: 600;
+        }
+        .container {
+            display: table;
+            width: 100%;
+            min-height: calc(100vh - 60px);
+        }
+        .sidebar {
+            display: table-cell;
+            width: 250px;
+            background-color: #0f172a;
+            color: #94a3b8;
+            padding: 20px 10px;
+            vertical-align: top;
+        }
+        .sidebar a {
+            display: block;
+            color: #cbd5e1;
+            text-decoration: none;
+            padding: 12px 15px;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            font-size: 10.5pt;
+        }
+        .sidebar a:hover, .sidebar a.active {
+            background-color: #1e293b;
+            color: white;
+            font-weight: bold;
+        }
+        .main-content {
+            display: table-cell;
+            padding: 25px;
+            vertical-align: top;
+        }
+        .card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border-left: 5px solid #3b82f6;
+        }
+        .card-alert {
+            border-left-color: #ef4444;
+        }
+        .card h2 {
+            margin-top: 0;
+            font-size: 13pt;
+            color: #1e3a8a;
+            border-bottom: 1px solid #e5e7eb;
+            padding-bottom: 10px;
+        }
+        .grid-stats {
+            display: table;
+            width: 100%;
+            margin-bottom: 15px;
+        }
+        .stat-col {
+            display: table-cell;
+            width: 25%;
+            padding: 10px;
+        }
+        .stat-box {
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            border-radius: 6px;
+            padding: 15px;
+            text-align: center;
+        }
+        .stat-val {
+            font-size: 16pt;
+            font-weight: bold;
+            color: #1e40af;
+        }
+        .stat-lbl {
+            font-size: 8.5pt;
+            color: #64748b;
+            margin-top: 5px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        th, td {
+            text-align: left;
+            padding: 10px;
+            border-bottom: 1px solid #e5e7eb;
+            font-size: 9.5pt;
+        }
+        th {
+            background-color: #f8fafc;
+            color: #334155;
+            font-weight: bold;
+        }
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 8pt;
+            font-weight: bold;
+        }
+        .badge-danger {
+            background-color: #fee2e2;
+            color: #991b1b;
+        }
+        .badge-warning {
+            background-color: #fef3c7;
+            color: #92400e;
+        }
+        .badge-success {
+            background-color: #dcfce7;
+            color: #166534;
+        }
+        .btn {
+            background-color: #2563eb;
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 9.5pt;
+            font-weight: 500;
+        }
+        .btn-success {
+            background-color: #16a34a;
+        }
+        .file-upload {
+            border: 2px dashed #cbd5e1;
+            border-radius: 8px;
+            padding: 30px;
+            text-align: center;
+            background-color: #f8fafc;
+            cursor: pointer;
+            margin-top: 15px;
+        }
+        .hash-code {
+            font-family: monospace;
+            background-color: #f1f5f9;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 8.5pt;
+            color: #475569;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Mutual Compliance AI — Control Art. 8 Res. UIF 99/2023</h1>
+        <div style="font-size: 9.5pt;">Oficial de Cumplimiento Activo</div>
+    </header>
+
+    <div class="container">
+        <div class="sidebar">
+            <a href="#" class="active">🔄 Panel de Control</a>
+            <a href="#">📁 Subir y Cotejar</a>
+            <a href="#">⚠️ Alertas Activas (1)</a>
+            <a href="#">📜 Historial de Reportes</a>
+            <a href="#">⚙️ Configuración</a>
+        </div>
+
+        <div class="main-content">
+            <div class="card">
+                <h2>Panel de Estado General</h2>
+                <div class="grid-stats">
+                    <div class="stat-col">
+                        <div class="stat-box">
+                            <div class="stat-val">15/07/2026</div>
+                            <div class="stat-lbl">Último Cotejo Realizado</div>
+                        </div>
+                    </div>
+                    <div class="stat-col">
+                        <div class="stat-box">
+                            <div class="stat-val">2026_07_15_personas.json</div>
+                            <div class="stat-lbl">Base RePET Actualizada</div>
+                        </div>
+                    </div>
+                    <div class="stat-col">
+                        <div class="stat-box" style="background-color: #fffbeb; border-color: #fde68a;">
+                            <div class="stat-val" style="color: #b45309;">1</div>
+                            <div class="stat-lbl">Alerta Pendiente de Resolución</div>
+                        </div>
+                    </div>
+                    <div class="stat-col">
+                        <div class="stat-box">
+                            <div class="stat-val">100%</div>
+                            <div class="stat-lbl">Tolerancia Fonética (75%)</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card card-alert">
+                <h2>⚠️ Alerta de Coincidencia Fonética Detectada (Resolución Manual)</h2>
+                <p style="font-size: 10pt; color: #4b5563;">El sistema detectó un asociado con alto porcentaje de coincidencia fonética con el listado oficial del RePET.</p>
+                
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Asociado ID</th>
+                            <th>Nombre Asociado</th>
+                            <th>Documento</th>
+                            <th>Candidato RePET</th>
+                            <th>Porcentaje</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>#502</strong></td>
+                            <td>AAMIR ALI CHAUDHRi</td>
+                            <td>DNI 95.111.222</td>
+                            <td>CHAUDHRY, Aamir Ali</td>
+                            <td><span class="badge badge-danger">94% Coincidencia</span></td>
+                            <td><span class="badge badge-warning">Pendiente de Firma</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div style="margin-top: 15px; padding: 15px; background-color: #fef2f2; border: 1px solid #fca5a5; border-radius: 6px;">
+                    <strong style="font-size: 10pt; color: #991b1b;">Procedimiento de Auditoría para Descartar Falso Positivo:</strong>
+                    <ol style="font-size: 9pt; color: #7f1d1d; margin-top: 5px; padding-left: 20px;">
+                        <li>Verificar la fecha de nacimiento en el legajo físico de la mutual versus la publicada en el RePET.</li>
+                        <li>Contrastar el número de DNI o pasaporte con el registro del sancionado internacional.</li>
+                        <li>Corroborar la nacionalidad declarada del asociado con la ficha de inscripción original.</li>
+                    </ol>
+                    
+                    <div style="margin-top: 15px;">
+                        <label style="display:block; font-size: 9pt; font-weight: bold; margin-bottom: 5px;">Justificación del Oficial de Cumplimiento para el archivo:</label>
+                        <textarea style="width: 100%; height: 60px; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 9.5pt;" placeholder="Ej: Se cotejó fecha de nacimiento y DNI del legajo físico de la mutual; no coinciden con el sancionado. Se determina homonimia y falso positivo."></textarea>
+                    </div>
+                    
+                    <div style="margin-top: 12px; text-align: right;">
+                        <button class="btn btn-success">✅ Confirmar Descarte y Guardar en Legajo</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Cargar Nueva Base de Socios (Control Art. 8)</h2>
+                <p style="font-size: 10pt; color: #4b5563;">Seleccione un archivo Excel exportado del sistema de gestión para iniciar de forma automática el cruce de datos contra los JSON descargados.</p>
+                <div class="file-upload">
+                    <span style="font-size: 18pt; color: #94a3b8;">📊</span>
+                    <p style="margin: 10px 0 0 0; font-size: 10pt; color: #64748b; font-weight: bold;">Arrastre su archivo Excel (.xlsx) aquí o haga clic para examinar</p>
+                    <span style="font-size: 8pt; color: #94a3b8;">Formatos permitidos: .xlsx, .csv</span>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Historial de Auditoría & Verificación Electrónica (Logs)</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Fecha Cotejo</th>
+                            <th>Fecha Excel</th>
+                            <th>JSON RePET Utilizado</th>
+                            <th>Registros</th>
+                            <th>Alertas</th>
+                            <th>Firma Hash de Integridad (SHA-256)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>15/07/2026</td>
+                            <td>15/07/2026</td>
+                            <td>2026_07_15_14_30_00_personas.json</td>
+                            <td>1.450</td>
+                            <td>1 (Resuelta)</td>
+                            <td><span class="hash-code">e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855</span></td>
+                        </tr>
+                        <tr>
+                            <td>15/01/2026</td>
+                            <td>12/01/2026</td>
+                            <td>2026_01_10_09_15_00_personas.json</td>
+                            <td>1.412</td>
+                            <td>0 (OK)</td>
+                            <td><span class="hash-code">a56f2b1585642ea8db9a8d7a184136fc7e782e4b6016dcf3819b78a9cde992ef</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>
