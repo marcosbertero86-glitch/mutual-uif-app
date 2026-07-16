@@ -75,7 +75,6 @@
             padding: 32px;
             overflow-y: auto;
         }
-        /* Clases de Control de Pestañas */
         .tab-content {
             display: none;
         }
@@ -203,6 +202,10 @@
             background-color: #f1f5f9;
             border-color: #3b82f6;
         }
+        .file-upload.dragover {
+            background-color: #eff6ff;
+            border-color: #2563eb;
+        }
         .hash-code {
             font-family: monospace;
             background-color: #f1f5f9;
@@ -259,11 +262,16 @@
                 <div class="card">
                     <h2>Cargar Nueva Base de Socios (Control Art. 8)</h2>
                     <p style="font-size: 10pt; color: #4b5563; margin-bottom: 20px;">Seleccione un archivo Excel exportado del sistema de gestión de la mutual para iniciar de forma automática el cruce fonético.</p>
-                    <div class="file-upload">
+                    
+                    <input type="file" id="excel-file-input" accept=".xlsx, .xls" style="display: none;" />
+                    <div class="file-upload" id="drop-zone" onclick="document.getElementById('excel-file-input').click()">
                         <span style="font-size: 28pt; color: #94a3b8;">📊</span>
-                        <p style="margin: 15px 0 5px 0; font-size: 11pt; color: #475569; font-weight: 600;">Arrastre su archivo Excel (.xlsx) aquí o haga clic para examinar</p>
+                        <p style="margin: 15px 0 5px 0; font-size: 11pt; color: #475569; font-weight: 600;" id="upload-status-text">Arrastre su archivo Excel (.xlsx) aquí o haga clic para examinar</p>
                         <span style="font-size: 8.5pt; color: #94a3b8;">Formatos permitidos: .xlsx, .csv</span>
                     </div>
+
+                    <div id="process-log" style="margin-top:20px; padding:15px; background:#0f172a; color:#10b981; font-family:monospace; font-size:9pt; border-radius:6px; display:none; max-height:150px; overflow-y:auto;">
+                        </div>
                 </div>
             </div>
 
@@ -347,11 +355,13 @@
         </div>
     </div>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
     <script>
-      const firebaseConfig = {
+        const firebaseConfig = {
   apiKey: "AIzaSyDqwtnhdP4P3Mf0rUFyluOPtrbMoxEtVj0",
   authDomain: "repet-d4ae7.firebaseapp.com",
   projectId: "repet-d4ae7",
@@ -360,14 +370,12 @@
   appId: "1:764953202218:web:318f57120a49817e98bd53",
   measurementId: "G-DKVERYVPJP"
 };
-
         // Inicializar Firebase
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
         // Control de Pestañas (Navegación)
         function switchTab(tabName) {
-            // Desactivar todas las pestañas
             document.querySelectorAll('.tab-content').forEach(tab => {
                 tab.classList.remove('active');
             });
@@ -375,17 +383,16 @@
                 btn.classList.remove('active');
             });
 
-            // Activar la seleccionada
             document.getElementById('tab-' + tabName).classList.add('active');
             document.getElementById('menu-' + tabName).classList.add('active');
         }
 
-        // Cargar alertas en tiempo real desde la colección de Firestore
+        // Cargar alertas en tiempo real desde Firestore
         function escucharAlertas() {
             const tableBody = document.getElementById("alertas-table-body");
             
             db.collection("alertas_pendientes").onSnapshot((querySnapshot) => {
-                tableBody.innerHTML = ""; // Limpiar antes de actualizar
+                tableBody.innerHTML = ""; 
                 
                 if (querySnapshot.empty) {
                     tableBody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:#64748b; padding:20px;">No hay alertas pendientes en la base de datos.</td></tr>`;
@@ -428,7 +435,149 @@
             });
         }
 
-        // Arrancar la escucha al cargar la página
+        // ================= MOTOR DE PROCESAMIENTO DE EXCEL =================
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('excel-file-input');
+        const logBox = document.getElementById('process-log');
+        const statusText = document.getElementById('upload-status-text');
+
+        // Base simulada de sospechosos RePET (para el cruce local)
+        const baseRePET = [
+            { nombre: "CHAUDHRY, Aamir Ali", pais: "Pakistán" },
+            { nombre: "AL-ZAWAHIRI, Ayman", pais: "Egipto" },
+            { nombre: "SULAIMAN, Hassan", pais: "Siria" }
+        ];
+
+        // Función simple para calcular similitud entre dos textos (Algoritmo Levenshtein)
+        function calcularSimilitud(s1, s2) {
+            let longer = s1.toLowerCase();
+            let shorter = s2.toLowerCase();
+            if (s1.length < s2.length) {
+                longer = s2;
+                shorter = s1;
+            }
+            let longerLength = longer.length;
+            if (longerLength === 0) return 1.0;
+            return ((longerLength - editDistance(longer, shorter)) / parseFloat(longerLength)) * 100;
+        }
+
+        function editDistance(s1, s2) {
+            let costs = [];
+            for (let i = 0; i <= s1.length; i++) {
+                let lastValue = i;
+                for (let j = 0; j <= s2.length; j++) {
+                    if (i === 0) costs[j] = j;
+                    else {
+                        if (j > 0) {
+                            let newValue = costs[j - 1];
+                            if (s1.charAt(i - 1) !== s2.charAt(j - 1))
+                                newValue = Math.min(Math.min(newValue, lastValue), costs[j]) + 1;
+                            costs[j - 1] = lastValue;
+                            lastValue = newValue;
+                        }
+                    }
+                }
+                if (i > 0) costs[s2.length] = lastValue;
+            }
+            return costs[s2.length];
+        }
+
+        // Eventos Drag & Drop para diseño visual
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('dragover');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                procesarArchivo(files[0]);
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                procesarArchivo(e.target.files[0]);
+            }
+        });
+
+        function procesarArchivo(file) {
+            statusText.innerText = "Leyendo archivo: " + file.name + "...";
+            logBox.style.display = "block";
+            logBox.innerHTML = `[INFO] Iniciando lectura de ${file.name}<br/>`;
+
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    
+                    // Leer la primera hoja
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    
+                    // Convertir a JSON array
+                    const listaSocios = XLSX.utils.sheet_to_json(worksheet);
+                    
+                    logBox.innerHTML += `[INFO] Se encontraron ${listaSocios.length} filas en la planilla.<br/>`;
+                    logBox.innerHTML += `[CUMPLIMIENTO] Iniciando análisis fonético de Art. 8 contra base RePET...<br/>`;
+
+                    let alertasDetectadas = 0;
+
+                    listaSocios.forEach((socio, index) => {
+                        // Intentamos adivinar las columnas Nombre y DNI del Excel
+                        const nombreSocio = socio.Nombre || socio.nombre || socio["Nombre y Apellido"] || Object.values(socio)[0];
+                        const dniSocio = socio.DNI || socio.dni || socio.Documento || Object.values(socio)[1] || "Sin Documento";
+
+                        if (nombreSocio) {
+                            baseRePET.forEach((candidato) => {
+                                const coincidencia = calcularSimilitud(nombreSocio.toString(), candidato.nombre);
+                                
+                                if (coincidencia >= 75) {
+                                    alertasDetectadas++;
+                                    logBox.innerHTML += `<span style="color:#f43f5e;">[ALERTA] Coincidencia del ${coincidencia.toFixed(1)}% detectada para el socio "${nombreSocio}" contra candidato RePET "${candidato.nombre}". Guardando en base de datos...</span><br/>`;
+                                    
+                                    // Guardar la alerta detectada en Firestore real
+                                    db.collection("alertas_pendientes").add({
+                                        nombre_socio: nombreSocio.toString(),
+                                        dni_socio: dniSocio.toString(),
+                                        nombre_repet_coincidente: candidato.nombre,
+                                        porcentaje_coincidencia: coincidencia.toFixed(0) + "%",
+                                        estado_resolucion: "Pendiente",
+                                        fecha_deteccion: new Date().toLocaleDateString()
+                                    }).then(() => {
+                                        logBox.innerHTML += `[OK] Alerta registrada con éxito en Firebase.<br/>`;
+                                    });
+                                }
+                            });
+                        }
+                    });
+
+                    setTimeout(() => {
+                        statusText.innerText = "¡Procesamiento finalizado!";
+                        logBox.innerHTML += `<br/>[FIN] Cruce finalizado. Total de alertas generadas: ${alertasDetectadas}.`;
+                        if(alertasDetectadas > 0) {
+                            alert("Se detectaron " + alertasDetectadas + " coincidencia(s). Verifique la pestaña 'Alertas Activas'.");
+                        } else {
+                            alert("Planilla procesada con éxito. No se detectaron coincidencias.");
+                        }
+                    }, 1500);
+
+                } catch (error) {
+                    console.error(error);
+                    logBox.innerHTML += `<span style="color:#ef4444;">[ERROR] No se pudo procesar el archivo. Verifique que sea un formato válido.</span><br/>`;
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        // Arrancar la escucha de Firestore al cargar la página
         window.onload = function() {
             escucharAlertas();
         };
