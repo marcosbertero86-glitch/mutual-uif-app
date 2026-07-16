@@ -183,7 +183,7 @@
         <div class="sidebar">
             <a href="#" class="active">🔄 Panel de Control</a>
             <a href="#">📁 Subir y Cotejar</a>
-            <a href="#">⚠️ Alertas Activas (1)</a>
+            <a href="#">⚠️ Alertas Activas (<span id="alerta-contador">0</span>)</a>
             <a href="#">📜 Historial de Reportes</a>
             <a href="#">⚙️ Configuración</a>
         </div>
@@ -206,7 +206,7 @@
                     </div>
                     <div class="stat-col">
                         <div class="stat-box" style="background-color: #fffbeb; border-color: #fde68a;">
-                            <div class="stat-val" style="color: #b45309;">1</div>
+                            <div class="stat-val" style="color: #b45309;" id="alerta-contador-badge">0</div>
                             <div class="stat-lbl">Alerta Pendiente de Resolución</div>
                         </div>
                     </div>
@@ -219,7 +219,7 @@
                 </div>
             </div>
 
-            <div class="card card-alert">
+            <div class="card card-alert" id="card-alertas-seccion" style="display: none;">
                 <h2>⚠️ Alerta de Coincidencia Fonética Detectada (Resolución Manual)</h2>
                 <p style="font-size: 10pt; color: #4b5563;">El sistema detectó un asociado con alto porcentaje de coincidencia fonética con el listado oficial del RePET.</p>
                 
@@ -234,15 +234,8 @@
                             <th>Estado</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        <tr>
-                            <td><strong>#502</strong></td>
-                            <td>AAMIR ALI CHAUDHRi</td>
-                            <td>DNI 95.111.222</td>
-                            <td>CHAUDHRY, Aamir Ali</td>
-                            <td><span class="badge badge-danger">94% Coincidencia</span></td>
-                            <td><span class="badge badge-warning">Pendiente de Firma</span></td>
-                        </tr>
+                    <tbody id="alertas-table-body">
+                        <!-- Los datos de Firebase se cargarán aquí -->
                     </tbody>
                 </table>
 
@@ -311,5 +304,82 @@
         </div>
     </div>
 
+    <!-- Firebase SDK (Soporte Compatibilidad) -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
+    <script>
+        // ================= CONFIGURACIÓN DE FIREBASE =================
+        // REEMPLAZÁ TODO ESTE BLOQUE CON EL TUYO DE LA CONSOLA:
+        const firebaseConfig = {
+            apiKey: "AIzaSyYourKeyHere...",
+            authDomain: "yourproject.firebaseapp.com",
+            projectId: "yourproject-id",
+            storageBucket: "yourproject.appspot.com",
+            messagingSenderId: "1234567890",
+            appId: "1:1234:web:abcd"
+        };
+        // =============================================================
+
+        // Inicializar Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        // Cargar alertas en tiempo real desde la colección de Firestore
+        function escucharAlertas() {
+            const tableBody = document.getElementById("alertas-table-body");
+            const alertCard = document.getElementById("card-alertas-seccion");
+            
+            db.collection("alertas_pendientes").onSnapshot((querySnapshot) => {
+                tableBody.innerHTML = ""; // Limpiar antes de actualizar
+                
+                if (querySnapshot.empty) {
+                    alertCard.style.display = "none";
+                    document.getElementById("alerta-contador").innerText = "0";
+                    document.getElementById("alerta-contador-badge").innerText = "0";
+                    return;
+                }
+
+                // Mostrar la sección si hay alertas
+                alertCard.style.display = "block";
+                const totalAlertas = querySnapshot.size;
+                document.getElementById("alerta-contador").innerText = totalAlertas;
+                document.getElementById("alerta-contador-badge").innerText = totalAlertas;
+
+                querySnapshot.forEach((doc) => {
+                    const alerta = doc.data();
+                    const idDoc = doc.id;
+                    const nombreSocio = alerta.nombre_socio || "Nombre no definido";
+                    const dniSocio = alerta.dni_socio || "Sin DNI";
+                    const nombreRepet = alerta.nombre_repet_coincidente || "Sin Coincidencia";
+                    const porcentaje = alerta.porcentaje_coincidencia || "75%";
+                    const estado = alerta.estado_resolucion || "Abierta";
+
+                    let badgeEstado = '<span class="badge badge-warning">Pendiente</span>';
+                    if (estado !== "Abierta" && estado !== "Pendiente") {
+                        badgeEstado = '<span class="badge badge-success">Resuelto</span>';
+                    }
+
+                    const row = document.createElement("tr");
+                    row.innerHTML = `
+                        <td><strong>#${idDoc.substring(0, 5)}</strong></td>
+                        <td>${nombreSocio}</td>
+                        <td>DNI ${dniSocio}</td>
+                        <td>${nombreRepet}</td>
+                        <td><span class="badge badge-danger">${porcentaje} Coincidencia</span></td>
+                        <td>${badgeEstado}</td>
+                    `;
+                    tableBody.appendChild(row);
+                });
+            }, (error) => {
+                console.error("Error al conectarse a Firestore: ", error);
+            });
+        }
+
+        // Arrancar la escucha al cargar la página
+        window.onload = function() {
+            escucharAlertas();
+        };
+    </script>
 </body>
 </html>
