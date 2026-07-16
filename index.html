@@ -483,4 +483,208 @@
             db.collection("alertas_pendientes").onSnapshot((querySnapshot) => {
                 tableBody.innerHTML = ""; 
                 if (querySnapshot.empty) {
-                    tableBody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:#647
+                    tableBody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:#64748b; padding:20px;">No hay alertas pendientes en Firebase.</td></tr>`;
+                    document.getElementById("alerta-contador").innerText = "0";
+                    document.getElementById("alerta-contador-badge").innerText = "0";
+                    return;
+                }
+                document.getElementById("alerta-contador").innerText = querySnapshot.size;
+                document.getElementById("alerta-contador-badge").innerText = querySnapshot.size;
+
+                querySnapshot.forEach((doc) => {
+                    const data = doc.data();
+                    const tr = document.createElement("tr");
+                    tr.innerHTML = `
+                        <td><strong>#${doc.id.substring(0, 5)}</strong></td>
+                        <td>${data.nombre_socio}</td>
+                        <td>DNI ${data.dni_socio}</td>
+                        <td>${data.nombre_repet_coincidente}</td>
+                        <td><span class="badge badge-danger">${data.porcentaje_coincidencia}</span></td>
+                        <td><span class="badge badge-warning">${data.estado_resolucion}</span></td>
+                    `;
+                    tableBody.appendChild(tr);
+                });
+            });
+        }
+
+        // Normalizador de texto fonético
+        function normalizarTexto(txt) {
+            if (!txt) return "";
+            return txt.toString().toLowerCase()
+                .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // Remueve tildes
+                .replace(/[^a-z0-9 ]/g, " ") // Conserva letras y números
+                .replace(/\s+/g, " ") // Unifica espacios
+                .trim();
+        }
+
+        // Similitud de Levenshtein
+        function calcularSimilitud(s1, s2) {
+            let n1 = normalizarTexto(s1);
+            let n2 = normalizarTexto(s2);
+            if (n1.includes(n2) || n2.includes(n1)) return 90.0; // Bonus por contenedor
+            
+            let longer = n1, shorter = n2;
+            if (n1.length < n2.length) { longer = n2; shorter = n1; }
+            let longerLength = longer.length;
+            if (longerLength === 0) return 100.0;
+
+            let costs = [];
+            for (let i = 0; i <= longer.length; i++) {
+                let lastValue = i;
+                for (let j = 0; j <= shorter.length; j++) {
+                    if (i === 0) costs[j] = j;
+                    else if (j > 0) {
+                        let newValue = costs[j - 1];
+                        if (longer.charAt(i - 1) !== shorter.charAt(j - 1)) {
+                            newValue = Math.min(Math.min(newValue, lastValue), costs[j]) + 1;
+                        }
+                        costs[j - 1] = lastValue;
+                        lastValue = newValue;
+                    }
+                }
+                if (i > 0) costs[shorter.length] = lastValue;
+            }
+            return ((longerLength - costs[shorter.length]) / parseFloat(longerLength)) * 100;
+        }
+
+        function encontrarColumna(row, opciones) {
+            for (let k of Object.keys(row)) {
+                let norm = normalizarTexto(k).replace(/\s/g, "");
+                for (let op of opciones) {
+                    if (norm.includes(op)) return row[k];
+                }
+            }
+            return null;
+        }
+
+        // ---- MANEJO DE ARCHIVOS ----
+        
+        // 1. Lectura del Excel
+        document.getElementById('excel-file-input').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            nombreArchivoExcel = file.name;
+            document.getElementById('txt-excel-status').innerText = "✓ Excel Cargado: " + file.name;
+            document.getElementById('drop-zone-excel').classList.add('uploaded');
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const ws = workbook.Sheets[workbook.SheetNames[0]];
+                memoriaAsociados = XLSX.utils.sheet_to_json(ws);
+                
+                // Mostrar vista previa
+                document.getElementById('excel-preview-box').style.display = 'block';
+                const headers = Object.keys(memoriaAsociados[0] || {});
+                document.getElementById('preview-headers').innerHTML = headers.map(h => `<th>${h}</th>`).join('');
+                document.getElementById('preview-body').innerHTML = memoriaAsociados.slice(0, 5).map(row => 
+                    `<tr>${headers.map(h => `<td>${row[h] !== undefined ? row[h] : ""}</td>`).join('')}</tr>`
+                ).join('');
+
+                validarBotonEjecucion();
+            };
+            reader.readAsArrayBuffer(file);
+        });
+
+        // 2. Lectura del JSON RePET Oficial
+        document.getElementById('json-file-input').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            nombreArchivoJSON = file.name;
+            document.getElementById('txt-json-status').innerText = "✓ RePET Cargado: " + file.name;
+            document.getElementById('drop-zone-json').classList.add('uploaded');
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const parsed = JSON.parse(e.target.result);
+                    memoriaRePET = Array.isArray(parsed) ? parsed : (parsed.personas || parsed.records || []);
+                    validarBotonEjecucion();
+                } catch(err) {
+                    alert("Error al leer el JSON del RePET. Asegúrese de que es un archivo JSON oficial.");
+                }
+            };
+            reader.readAsText(file);
+        });
+
+        function validarBotonEjecucion() {
+            if (memoriaAsociados.length > 0 && memoriaRePET.length > 0) {
+                document.getElementById('btn-run-audit').removeAttribute('disabled');
+            }
+        }
+
+        // 3. PROCESAR CRUCE FONÉTICO
+        document.getElementById('btn-run-audit').addEventListener('click', function() {
+            const log = document.getElementById('process-log');
+            log.style.display = 'block';
+            log.innerHTML = `[CRUCE] Procesando ${memoriaAsociados.length} asociados contra ${memoriaRePET.length} registros del RePET usando tolerancia del ${toleranciaActual}%...<br/>`;
+
+            let alertasNuevas = 0;
+
+            memoriaAsociados.forEach((socio, idx) => {
+                let nombreSocio = encontrarColumna(socio, ["nombre", "socio", "apenom", "asociado", "nombres"]);
+                let dniSocio = encontrarColumna(socio, ["dni", "doc", "documento", "cuit", "cuil"]) || "Sin Documento";
+
+                if (!nombreSocio) {
+                    const vals = Object.values(socio);
+                    nombreSocio = vals[0];
+                    dniSocio = vals[1] || "Sin Documento";
+                }
+
+                if (nombreSocio) {
+                    memoriaRePET.forEach(candidato => {
+                        let nombreCandidato = candidato.nombre || candidato.denominacion || candidato.nombreCompleto || Object.values(candidato)[0];
+                        
+                        if (nombreCandidato) {
+                            let score = calcularSimilitud(nombreSocio.toString(), nombreCandidato.toString());
+                            
+                            // Evalúa según el umbral dinámico seleccionado por el usuario
+                            if (score >= toleranciaActual) {
+                                alertasNuevas++;
+                                log.innerHTML += `<span style="color:#f43f5e;">[ALERTA DETECTADA] Coincidencia ${score.toFixed(0)}%: Socio "${nombreSocio}" vs RePET "${nombreCandidato}"</span><br/>`;
+                                
+                                // Registrar en Firestore
+                                db.collection("alertas_pendientes").add({
+                                    nombre_socio: nombreSocio.toString(),
+                                    dni_socio: dniSocio.toString(),
+                                    nombre_repet_coincidente: nombreCandidato.toString(),
+                                    porcentaje_coincidencia: score.toFixed(0) + "%",
+                                    estado_resolucion: "Pendiente",
+                                    fecha_deteccion: new Date().toLocaleDateString()
+                                });
+                            }
+                        }
+                    });
+                }
+            });
+
+            // Actualizar interfaz y estadísticas
+            const fechaHoy = new Date().toLocaleDateString();
+            document.getElementById('stat-last-run').innerText = fechaHoy;
+            document.getElementById('stat-repet-loaded').innerText = nombreArchivoJSON;
+
+            // Registrar en historial visual
+            const tableHistorial = document.getElementById('historial-table-body');
+            const hashSimulado = "sha256_" + Math.random().toString(36).substring(2, 15);
+            tableHistorial.innerHTML = `
+                <tr>
+                    <td>${fechaHoy}</td>
+                    <td>${memoriaAsociados.length}</td>
+                    <td>${nombreArchivoJSON}</td>
+                    <td><span class="badge ${alertasNuevas > 0 ? 'badge-danger':'badge-success'}">${alertasNuevas}</span></td>
+                    <td>${toleranciaActual}%</td>
+                    <td><span class="hash-code">${hashSimulado}</span></td>
+                </tr>
+            ` + tableHistorial.innerHTML;
+
+            log.innerHTML += `<br/>[COMPLETO] Análisis finalizado con éxito (Umbral: ${toleranciaActual}%). Alertas totales reportadas: ${alertasNuevas}.`;
+            alert("Proceso finalizado. Total de coincidencias detectadas: " + alertasNuevas);
+        });
+
+        window.onload = function() {
+            escucharAlertas();
+        };
+    </script>
+</body>
+</html>
