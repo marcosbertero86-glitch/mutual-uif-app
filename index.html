@@ -443,14 +443,14 @@
 
     <script>
         const firebaseConfig = {
-  apiKey: "AIzaSyDqwtnhdP4P3Mf0rUFyluOPtrbMoxEtVj0",
-  authDomain: "repet-d4ae7.firebaseapp.com",
-  projectId: "repet-d4ae7",
-  storageBucket: "repet-d4ae7.firebasestorage.app",
-  messagingSenderId: "764953202218",
-  appId: "1:764953202218:web:318f57120a49817e98bd53",
-  measurementId: "G-DKVERYVPJP"
-};
+            apiKey: "AIzaSyDqwtnhdP4P3Mf0rUFyluOPtrbMoxEtVj0",
+            authDomain: "repet-d4ae7.firebaseapp.com",
+            projectId: "repet-d4ae7",
+            storageBucket: "repet-d4ae7.firebasestorage.app",
+            messagingSenderId: "764953202218",
+            appId: "1:764953202218:web:318f57120a49817e98bd53",
+            measurementId: "G-DKVERYVPJP"
+        };
 
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
@@ -614,7 +614,7 @@
             }
         }
 
-        // 3. PROCESAR CRUCE FONÉTICO
+        // 3. PROCESAR CRUCE FONÉTICO (CON LOGICA ANTI-NÚMEROS ACTUALIZADA)
         document.getElementById('btn-run-audit').addEventListener('click', function() {
             const log = document.getElementById('process-log');
             log.style.display = 'block';
@@ -623,23 +623,43 @@
             let alertasNuevas = 0;
 
             memoriaAsociados.forEach((socio, idx) => {
-                let nombreSocio = encontrarColumna(socio, ["nombre", "socio", "apenom", "asociado", "nombres"]);
+                let nombreSocio = encontrarColumna(socio, ["nombre", "socio", "apenom", "asociado", "nombres", "apellido", "completo"]);
                 let dniSocio = encontrarColumna(socio, ["dni", "doc", "documento", "cuit", "cuil"]) || "Sin Documento";
 
+                // Si no se detectó por cabecera, buscamos un campo que realmente tenga pinta de nombre (texto de longitud > 3)
                 if (!nombreSocio) {
                     const vals = Object.values(socio);
-                    nombreSocio = vals[0];
-                    dniSocio = vals[1] || "Sin Documento";
+                    for (let val of vals) {
+                        if (val && isNaN(val) && val.toString().trim().length > 3) {
+                            nombreSocio = val;
+                            break;
+                        }
+                    }
+                    // Si aun así no hubo suerte, nos quedamos con el primero por defecto
+                    if (!nombreSocio) nombreSocio = vals[0];
                 }
 
-                if (nombreSocio) {
+                // Evitamos procesar si el "nombre" resultante es puramente un número (ID de sistema)
+                if (nombreSocio && isNaN(nombreSocio.toString().trim())) {
+                    
                     memoriaRePET.forEach(candidato => {
-                        let nombreCandidato = candidato.nombre || candidato.denominacion || candidato.nombreCompleto || Object.values(candidato)[0];
+                        let nombreCandidato = candidato.nombre || candidato.denominacion || candidato.nombreCompleto || candidato.nombre_completo;
                         
-                        if (nombreCandidato) {
+                        // Si la estructura del RePET no coincide, buscamos un campo de texto en sus propiedades
+                        if (!nombreCandidato) {
+                            const cVals = Object.values(candidato);
+                            for (let cv of cVals) {
+                                if (cv && isNaN(cv) && cv.toString().trim().length > 3) {
+                                    nombreCandidato = cv;
+                                    break;
+                                }
+                            }
+                        }
+
+                        // Ambos elementos deben ser de texto no numérico para cruzarse
+                        if (nombreCandidato && isNaN(nombreCandidato.toString().trim())) {
                             let score = calcularSimilitud(nombreSocio.toString(), nombreCandidato.toString());
                             
-                            // Evalúa según el umbral dinámico seleccionado por el usuario
                             if (score >= toleranciaActual) {
                                 alertasNuevas++;
                                 log.innerHTML += `<span style="color:#f43f5e;">[ALERTA DETECTADA] Coincidencia ${score.toFixed(0)}%: Socio "${nombreSocio}" vs RePET "${nombreCandidato}"</span><br/>`;
