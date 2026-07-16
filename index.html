@@ -189,10 +189,18 @@
         .btn-success:hover {
             background-color: #15803d;
         }
+        
+        /* Contenedor de subidas en paralelo */
+        .upload-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 25px;
+        }
         .file-upload {
             border: 2px dashed #cbd5e1;
             border-radius: 12px;
-            padding: 48px;
+            padding: 30px 20px;
             text-align: center;
             background-color: #f8fafc;
             cursor: pointer;
@@ -202,10 +210,55 @@
             background-color: #f1f5f9;
             border-color: #3b82f6;
         }
-        .file-upload.dragover {
-            background-color: #eff6ff;
-            border-color: #2563eb;
+        .file-upload.uploaded {
+            border-color: #10b981;
+            background-color: #ecfdf5;
         }
+        
+        /* Estilos del Control Deslizante de Tolerancia */
+        .slider-container {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+        }
+        .slider-info {
+            flex: 1;
+        }
+        .slider-info h3 {
+            margin: 0 0 5px 0;
+            font-size: 11pt;
+            color: #1e3a8a;
+        }
+        .slider-info p {
+            margin: 0;
+            font-size: 8.5pt;
+            color: #64748b;
+        }
+        .slider-control {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            width: 50%;
+        }
+        .slider-control input[type="range"] {
+            flex: 1;
+            accent-color: #2563eb;
+            cursor: pointer;
+        }
+        .slider-value {
+            font-size: 16pt;
+            font-weight: 700;
+            color: #2563eb;
+            min-width: 60px;
+            text-align: right;
+        }
+
         .hash-code {
             font-family: monospace;
             background-color: #f1f5f9;
@@ -214,7 +267,6 @@
             font-size: 8.5pt;
             color: #475569;
         }
-        /* Nueva sección para vista previa */
         .preview-container {
             margin-top: 25px;
             background: white;
@@ -239,7 +291,6 @@
     </header>
 
     <div class="container">
-        <!-- Menú Lateral Dinámico -->
         <div class="sidebar">
             <a onclick="switchTab('panel')" id="menu-panel" class="active">🔄 Panel de Control</a>
             <a onclick="switchTab('cotejar')" id="menu-cotejar">📁 Subir y Cotejar</a>
@@ -249,77 +300,98 @@
 
         <div class="main-content">
             
-            <!-- PESTAÑA 1: PANEL DE CONTROL -->
             <div id="tab-panel" class="tab-content active">
                 <div class="card">
                     <h2>Panel de Estado General</h2>
                     <div class="grid-stats">
                         <div class="stat-box">
-                            <div class="stat-val">15/07/2026</div>
+                            <div class="stat-val" id="stat-last-run">--/--/----</div>
                             <div class="stat-lbl">Último Cotejo</div>
                         </div>
                         <div class="stat-box">
-                            <div class="stat-val" style="font-size: 10.5pt; word-break: break-all;">2026_07_15_personas.json</div>
-                            <div class="stat-lbl">Base RePET</div>
+                            <div class="stat-val" style="font-size: 10.5pt; word-break: break-all;" id="stat-repet-loaded">Sin Cargar</div>
+                            <div class="stat-lbl">Base RePET Importada</div>
                         </div>
                         <div class="stat-box" style="background-color: #fffbeb; border-color: #fde68a;">
                             <div class="stat-val" style="color: #b45309;" id="alerta-contador-badge">0</div>
                             <div class="stat-lbl">Alertas Abiertas</div>
                         </div>
                         <div class="stat-box">
-                            <div class="stat-val">75%</div>
-                            <div class="stat-lbl">Tolerancia Fonética</div>
+                            <div class="stat-val" id="stat-current-tolerance">75%</div>
+                            <div class="stat-lbl">Tolerancia Activa</div>
                         </div>
                     </div>
-                    <p style="font-size:10pt; color:#64748b; line-height: 1.5;">Bienvenido al panel de control de cumplimiento. Desde el menú de la izquierda puede cargar nuevas planillas de asociados para cruzar contra la última base de datos descargada del Registro de Personas Vinculadas a Actos de Terrorismo (RePET).</p>
+                    <p style="font-size:10pt; color:#64748b; line-height: 1.5;">Bienvenido al panel de control de cumplimiento. Desde el menú de la izquierda puede cargar nuevas planillas de asociados para cruzar contra la última base de datos oficial del Registro de Personas Vinculadas a Actos de Terrorismo (RePET).</p>
                 </div>
             </div>
 
-            <!-- PESTAÑA 2: SUBIR Y COTEJAR -->
             <div id="tab-cotejar" class="tab-content">
                 <div class="card">
-                    <h2>Cargar Nueva Base de Socios (Control Art. 8)</h2>
-                    <p style="font-size: 10pt; color: #4b5563; margin-bottom: 20px;">Seleccione un archivo Excel exportado del sistema de gestión de la mutual para iniciar de forma automática el cruce fonético.</p>
+                    <h2>Cargar Archivos para Cruce de Datos (Art. 8)</h2>
+                    <p style="font-size: 10pt; color: #4b5563; margin-bottom: 20px;">
+                        Para realizar la auditoría, cargue tanto el archivo Excel de sus asociados como el archivo JSON oficial del RePET descargado desde el portal oficial del Ministerio de Justicia.
+                    </p>
                     
-                    <!-- File Input oculto y área de arrastre -->
-                    <input type="file" id="excel-file-input" accept=".xlsx, .xls" style="display: none;" />
-                    <div class="file-upload" id="drop-zone" onclick="document.getElementById('excel-file-input').click()">
-                        <span style="font-size: 28pt; color: #94a3b8;">📊</span>
-                        <p style="margin: 15px 0 5px 0; font-size: 11pt; color: #475569; font-weight: 600;" id="upload-status-text">Arrastre su archivo Excel (.xlsx) aquí o haga clic para examinar</p>
-                        <span style="font-size: 8.5pt; color: #94a3b8;">Formatos permitidos: .xlsx, .csv</span>
+                    <div class="upload-grid">
+                        <div>
+                            <label style="display:block; font-size:10pt; font-weight:600; margin-bottom:8px;">1. Base de Asociados (Excel):</label>
+                            <input type="file" id="excel-file-input" accept=".xlsx, .xls" style="display: none;" />
+                            <div class="file-upload" id="drop-zone-excel" onclick="document.getElementById('excel-file-input').click()">
+                                <span style="font-size: 24pt;">📊</span>
+                                <p style="margin: 10px 0 0 0; font-size: 9.5pt; color: #475569; font-weight: 600;" id="txt-excel-status">Arrastrar Excel (.xlsx)</p>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label style="display:block; font-size:10pt; font-weight:600; margin-bottom:8px;">2. Base Oficial RePET (JSON Personas):</label>
+                            <input type="file" id="json-file-input" accept=".json" style="display: none;" />
+                            <div class="file-upload" id="drop-zone-json" onclick="document.getElementById('json-file-input').click()">
+                                <span style="font-size: 24pt;">⚖️</span>
+                                <p style="margin: 10px 0 0 0; font-size: 9.5pt; color: #475569; font-weight: 600;" id="txt-json-status">Arrastrar personas.json</p>
+                            </div>
+                        </div>
                     </div>
 
-                    <!-- NUEVO: Vista previa de lo leído en el Excel -->
+                    <div class="slider-container">
+                        <div class="slider-info">
+                            <h3>Ajustar Tolerancia de Coincidencia Fonética</h3>
+                            <p>Valores bajos (50%-70%) generan más alertas preventivas de homonimia. Valores altos (80%-100%) buscan coincidencias casi exactas.</p>
+                        </div>
+                        <div class="slider-control">
+                            <input type="range" id="tolerance-slider" min="50" max="100" value="75" oninput="actualizarSlider(this.value)" />
+                            <span class="slider-value" id="tolerance-display">75%</span>
+                        </div>
+                    </div>
+
+                    <div style="text-align: center; margin: 20px 0;">
+                        <button class="btn btn-success" id="btn-run-audit" style="font-size: 11pt; padding: 12px 30px;" disabled>
+                            🚀 Ejecutar Cruce Fonético e Informar Alertas
+                        </button>
+                    </div>
+
                     <div class="preview-container" id="excel-preview-box">
-                        <div class="preview-title">👀 Vista Previa de Datos Detectados en el Excel (Primeras 5 filas):</div>
+                        <div class="preview-title">👀 Vista Previa de Asociados Detectados (Primeras 5 filas):</div>
                         <table style="margin-top: 5px; background: #fafafa;">
                             <thead>
-                                <tr id="preview-headers">
-                                    <!-- Dinámico -->
-                                </tr>
+                                <tr id="preview-headers"></tr>
                             </thead>
-                            <tbody id="preview-body">
-                                <!-- Dinámico -->
-                            </tbody>
+                            <tbody id="preview-body"></tbody>
                         </table>
                     </div>
 
-                    <div id="process-log" style="margin-top:20px; padding:15px; background:#0f172a; color:#10b981; font-family:monospace; font-size:9pt; border-radius:6px; display:none; max-height:200px; overflow-y:auto;">
-                        <!-- Logs del procesamiento real -->
-                    </div>
+                    <div id="process-log" style="margin-top:20px; padding:15px; background:#0f172a; color:#10b981; font-family:monospace; font-size:9pt; border-radius:6px; display:none; max-height:250px; overflow-y:auto;"></div>
                 </div>
             </div>
 
-            <!-- PESTAÑA 3: ALERTAS ACTIVAS -->
             <div id="tab-alertas" class="tab-content">
                 <div class="card card-alert">
                     <h2>⚠️ Alertas de Coincidencia Fonética Activas</h2>
-                    <p style="font-size: 10pt; color: #4b5563;">El motor fonético de cumplimiento detectó coincidencias que requieren su intervención manual para descartar homonimias.</p>
+                    <p style="font-size: 10pt; color: #4b5563;">El motor fonético detectó estas coincidencias. Debe realizar la auditoría obligatoria antes de descartarlas o confirmarlas.</p>
                     
                     <table>
                         <thead>
                             <tr>
-                                <th>Asociado ID</th>
+                                <th>ID Alerta</th>
                                 <th>Nombre Asociado</th>
                                 <th>Documento</th>
                                 <th>Candidato RePET</th>
@@ -327,63 +399,34 @@
                                 <th>Estado</th>
                             </tr>
                         </thead>
-                        <tbody id="alertas-table-body">
-                            <!-- Datos de Firebase dinámicos -->
-                        </tbody>
+                        <tbody id="alertas-table-body"></tbody>
                     </table>
-
-                    <div style="margin-top: 24px; padding: 20px; background-color: #fef2f2; border: 1px solid #fca5a5; border-radius: 8px;">
-                        <strong style="font-size: 10.5pt; color: #991b1b; display: block; margin-bottom: 8px;">Procedimiento Obligatorio de Auditoría:</strong>
-                        <ol style="font-size: 9.5pt; color: #7f1d1d; margin: 0; padding-left: 20px; line-height: 1.6;">
-                            <li>Verificar fecha de nacimiento en legajo físico vs. RePET.</li>
-                            <li>Contrastar número de DNI o documento internacional de identidad.</li>
-                            <li>Corroborar la nacionalidad del asociado con su ficha de ingreso.</li>
-                        </ol>
-                        
-                        <div style="margin-top: 18px;">
-                            <label style="display:block; font-size: 9.5pt; font-weight: 600; margin-bottom: 8px; color: #7f1d1d;">Justificación de Resolución:</label>
-                            <textarea style="width: 100%; height: 70px; padding: 10px; border: 1px solid #fca5a5; border-radius: 6px; font-size: 9.5pt;" placeholder="Detalle por qué se descarta el caso..."></textarea>
-                        </div>
-                        
-                        <div style="margin-top: 16px; text-align: right;">
-                            <button class="btn btn-success">✅ Confirmar Descarte y Guardar en Legajo</button>
-                        </div>
-                    </div>
                 </div>
             </div>
 
-            <!-- PESTAÑA 4: HISTORIAL -->
             <div id="tab-historial" class="tab-content">
                 <div class="card">
-                    <h2>Historial de Auditoría & Verificación Electrónica (Logs)</h2>
-                    <p style="font-size: 10pt; color: #4b5563; margin-bottom: 20px;">Registro de operaciones firmadas digitalmente con algoritmo SHA-256 para demostrar integridad de auditoría ante INAES/UIF.</p>
+                    <h2>Historial de Auditoría & Verificación Electrónica</h2>
+                    <p style="font-size: 10pt; color: #4b5563; margin-bottom: 20px;">Auditoría inmutable para fiscalizaciones de INAES o UIF.</p>
                     <table>
                         <thead>
                             <tr>
                                 <th>Fecha Cotejo</th>
-                                <th>Fecha Excel</th>
-                                <th>JSON RePET</th>
-                                <th>Registros</th>
+                                <th>Registros Cruzados</th>
+                                <th>Base RePET Usada</th>
                                 <th>Alertas</th>
-                                <th>Firma Integridad (SHA-256)</th>
+                                <th>Tolerancia Aplicada</th>
+                                <th>Firma SHA-256</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody id="historial-table-body">
                             <tr>
-                                <td>15/07/2026</td>
-                                <td>15/07/2026</td>
-                                <td>2026_07_15_personas.json</td>
-                                <td>1.450</td>
-                                <td>1 (Resuelta)</td>
-                                <td><span class="hash-code">e3b0c44298fc1c149afbf4c8...</span></td>
-                            </tr>
-                            <tr>
-                                <td>15/01/2026</td>
-                                <td>12/01/2026</td>
-                                <td>2026_01_10_personas.json</td>
-                                <td>1.412</td>
-                                <td>0 (OK)</td>
-                                <td><span class="hash-code">a56f2b1585642ea8db9a8d7...</span></td>
+                                <td>--/--/----</td>
+                                <td>Sin registros</td>
+                                <td>Sin Cargar</td>
+                                <td>0</td>
+                                <td>N/A</td>
+                                <td><span class="hash-code">N/A</span></td>
                             </tr>
                         </tbody>
                     </table>
@@ -393,15 +436,13 @@
         </div>
     </div>
 
-    <!-- Librería para leer archivos Excel (SheetJS) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
-    <!-- Firebase SDK (Soporte Compatibilidad) -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
     <script>
-       const firebaseConfig = {
+        const firebaseConfig = {
   apiKey: "AIzaSyDqwtnhdP4P3Mf0rUFyluOPtrbMoxEtVj0",
   authDomain: "repet-d4ae7.firebaseapp.com",
   projectId: "repet-d4ae7",
@@ -411,287 +452,35 @@
   measurementId: "G-DKVERYVPJP"
 };
 
-        // Inicializar Firebase
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
-        // Control de Pestañas (Navegación)
-        function switchTab(tabName) {
-            document.querySelectorAll('.tab-content').forEach(tab => {
-                tab.classList.remove('active');
-            });
-            document.querySelectorAll('.sidebar a').forEach(btn => {
-                btn.classList.remove('active');
-            });
+        // Estados globales de memoria
+        let memoriaAsociados = [];
+        let memoriaRePET = [];
+        let nombreArchivoExcel = "";
+        let nombreArchivoJSON = "";
+        let toleranciaActual = 75; // Valor por defecto
 
+        // Actualizar visualización del Slider en vivo
+        function actualizarSlider(val) {
+            toleranciaActual = parseInt(val);
+            document.getElementById('tolerance-display').innerText = val + "%";
+            document.getElementById('stat-current-tolerance').innerText = val + "%";
+        }
+
+        // Navegación
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.sidebar a').forEach(btn => btn.classList.remove('active'));
             document.getElementById('tab-' + tabName).classList.add('active');
             document.getElementById('menu-' + tabName).classList.add('active');
         }
 
-        // Cargar alertas en tiempo real desde Firestore
+        // Listener de alertas activas de Firebase
         function escucharAlertas() {
             const tableBody = document.getElementById("alertas-table-body");
-            
             db.collection("alertas_pendientes").onSnapshot((querySnapshot) => {
                 tableBody.innerHTML = ""; 
-                
                 if (querySnapshot.empty) {
-                    tableBody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:#64748b; padding:20px;">No hay alertas pendientes en la base de datos.</td></tr>`;
-                    document.getElementById("alerta-contador").innerText = "0";
-                    document.getElementById("alerta-contador-badge").innerText = "0";
-                    return;
-                }
-
-                const totalAlertas = querySnapshot.size;
-                document.getElementById("alerta-contador").innerText = totalAlertas;
-                document.getElementById("alerta-contador-badge").innerText = totalAlertas;
-
-                querySnapshot.forEach((doc) => {
-                    const alerta = doc.data();
-                    const idDoc = doc.id;
-                    const nombreSocio = alerta.nombre_socio || "Nombre no definido";
-                    const dniSocio = alerta.dni_socio || "Sin DNI";
-                    const nombreRepet = alerta.nombre_repet_coincidente || "Sin Coincidencia";
-                    const porcentaje = alerta.porcentaje_coincidencia || "75%";
-                    const estado = alerta.estado_resolucion || "Abierta";
-
-                    let badgeEstado = '<span class="badge badge-warning">Pendiente</span>';
-                    if (estado !== "Abierta" && estado !== "Pendiente") {
-                        badgeEstado = '<span class="badge badge-success">Resuelto</span>';
-                    }
-
-                    const row = document.createElement("tr");
-                    row.innerHTML = `
-                        <td><strong>#${idDoc.substring(0, 5)}</strong></td>
-                        <td>${nombreSocio}</td>
-                        <td>DNI ${dniSocio}</td>
-                        <td>${nombreRepet}</td>
-                        <td><span class="badge badge-danger">${porcentaje} Coincidencia</span></td>
-                        <td>${badgeEstado}</td>
-                    `;
-                    tableBody.appendChild(row);
-                });
-            }, (error) => {
-                console.error("Error al conectarse a Firestore: ", error);
-            });
-        }
-
-        // ================= MOTOR DE PROCESAMIENTO DE EXCEL =================
-        const dropZone = document.getElementById('drop-zone');
-        const fileInput = document.getElementById('excel-file-input');
-        const logBox = document.getElementById('process-log');
-        const statusText = document.getElementById('upload-status-text');
-        const previewBox = document.getElementById('excel-preview-box');
-        const previewHeaders = document.getElementById('preview-headers');
-        const previewBody = document.getElementById('preview-body');
-
-        // Base simulada de sospechosos RePET expandida para la prueba
-        const baseRePET = [
-            { nombre: "CHAUDHRY, Aamir Ali", pais: "Pakistán" },
-            { nombre: "AL-ZAWAHIRI, Ayman", pais: "Egipto" },
-            { nombre: "SULAIMAN, Hassan", pais: "Siria" }
-        ];
-
-        // Normalizar texto (elimina acentos, mayúsculas/minúsculas y caracteres raros)
-        function normalizarTexto(txt) {
-            if (!txt) return "";
-            return txt.toString().toLowerCase()
-                .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // Saca acentos
-                .replace(/[^a-z0-9 ]/g, " ") // Saca comas, guiones, etc.
-                .replace(/\s+/g, " ") // Saca dobles espacios
-                .trim();
-        }
-
-        // Algoritmo Levenshtein para similitud fonética/ortográfica
-        function calcularSimilitud(s1, s2) {
-            let n1 = normalizarTexto(s1);
-            let n2 = normalizarTexto(s2);
-
-            // Si uno contiene al otro completo, le damos un bonus de coincidencia
-            if (n1.includes(n2) || n2.includes(n1)) {
-                return 90.0;
-            }
-
-            let longer = n1;
-            let shorter = n2;
-            if (n1.length < n2.length) {
-                longer = n2;
-                shorter = n1;
-            }
-            let longerLength = longer.length;
-            if (longerLength === 0) return 100.0;
-            return ((longerLength - editDistance(longer, shorter)) / parseFloat(longerLength)) * 100;
-        }
-
-        function editDistance(s1, s2) {
-            let costs = [];
-            for (let i = 0; i <= s1.length; i++) {
-                let lastValue = i;
-                for (let j = 0; j <= s2.length; j++) {
-                    if (i === 0) costs[j] = j;
-                    else {
-                        if (j > 0) {
-                            let newValue = costs[j - 1];
-                            if (s1.charAt(i - 1) !== s2.charAt(j - 1))
-                                newValue = Math.min(Math.min(newValue, lastValue), costs[j]) + 1;
-                            costs[j - 1] = lastValue;
-                            lastValue = newValue;
-                        }
-                    }
-                }
-                if (i > 0) costs[s2.length] = lastValue;
-            }
-            return costs[s2.length];
-        }
-
-        // Eventos Drag & Drop
-        dropZone.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            dropZone.classList.add('dragover');
-        });
-
-        dropZone.addEventListener('dragleave', () => {
-            dropZone.classList.remove('dragover');
-        });
-
-        dropZone.addEventListener('drop', (e) => {
-            e.preventDefault();
-            dropZone.classList.remove('dragover');
-            const files = e.dataTransfer.files;
-            if (files.length > 0) {
-                procesarArchivo(files[0]);
-            }
-        });
-
-        fileInput.addEventListener('change', (e) => {
-            if (e.target.files.length > 0) {
-                procesarArchivo(e.target.files[0]);
-            }
-        });
-
-        // Encontrar columna de forma flexible
-        function encontrarValorPorColumna(row, posiblesNombres) {
-            const keys = Object.keys(row);
-            for (let k of keys) {
-                const keyNormalizado = normalizarTexto(k).replace(/\s/g, "");
-                for (let pos of posiblesNombres) {
-                    if (keyNormalizado.includes(pos)) {
-                        return row[k];
-                    }
-                }
-            }
-            return null;
-        }
-
-        function procesarArchivo(file) {
-            statusText.innerText = "Leyendo archivo: " + file.name + "...";
-            logBox.style.display = "block";
-            logBox.innerHTML = `[INFO] Iniciando lectura de ${file.name}<br/>`;
-            previewBox.style.display = "none";
-
-            const reader = new FileReader();
-            reader.onload = function (e) {
-                try {
-                    const data = new Uint8Array(e.target.result);
-                    const workbook = XLSX.read(data, { type: 'array' });
-                    
-                    const firstSheetName = workbook.SheetNames[0];
-                    const worksheet = workbook.Sheets[firstSheetName];
-                    const listaSocios = XLSX.utils.sheet_to_json(worksheet);
-                    
-                    if (listaSocios.length === 0) {
-                        logBox.innerHTML += `<span style="color:#ef4444;">[ERROR] El archivo está vacío o no tiene el formato correcto.</span><br/>`;
-                        return;
-                    }
-
-                    logBox.innerHTML += `[INFO] Se encontraron ${listaSocios.length} filas en la planilla.<br/>`;
-                    
-                    // ================= VISTA PREVIA =================
-                    previewBox.style.display = "block";
-                    previewHeaders.innerHTML = "";
-                    previewBody.innerHTML = "";
-
-                    // Generar cabeceras de tabla a partir de las keys del primer registro
-                    const headers = Object.keys(listaSocios[0]);
-                    headers.forEach(h => {
-                        const th = document.createElement("th");
-                        th.innerText = h;
-                        previewHeaders.appendChild(th);
-                    });
-
-                    // Mostrar primeras 5 filas en la interfaz
-                    listaSocios.slice(0, 5).forEach(row => {
-                        const tr = document.createElement("tr");
-                        headers.forEach(h => {
-                            const td = document.createElement("td");
-                            td.innerText = row[h] !== undefined ? row[h] : "";
-                            tr.appendChild(td);
-                        });
-                        previewBody.appendChild(tr);
-                    });
-                    
-                    logBox.innerHTML += `[CUMPLIMIENTO] Iniciando análisis de Art. 8 contra base RePET...<br/>`;
-
-                    let alertasDetectadas = 0;
-
-                    listaSocios.forEach((socio, index) => {
-                        // Búsqueda inteligente de nombres: "nombre", "socio", "apenom", "asociado", "nombres"
-                        let nombreSocio = encontrarValorPorColumna(socio, ["nombre", "socio", "apenom", "asociado", "nombres"]);
-                        // Búsqueda inteligente de documentos: "dni", "doc", "documento", "cuit", "cuil"
-                        let dniSocio = encontrarValorPorColumna(socio, ["dni", "doc", "documento", "cuit", "cuil"]) || "Sin Documento";
-
-                        // Si falló el mapeo inteligente, agarramos por posición (Columna 1 y Columna 2)
-                        if (!nombreSocio) {
-                            const valores = Object.values(socio);
-                            nombreSocio = valores[0];
-                            dniSocio = valores[1] || "Sin Documento";
-                        }
-
-                        if (nombreSocio) {
-                            baseRePET.forEach((candidato) => {
-                                const coincidencia = calcularSimilitud(nombreSocio.toString(), candidato.nombre);
-                                
-                                if (coincidencia >= 75) {
-                                    alertasDetectadas++;
-                                    logBox.innerHTML += `<span style="color:#f43f5e;">[ALERTA DETECTADA] ${coincidencia.toFixed(1)}% coincidencia. Socio: "${nombreSocio}" (Fila ${index + 2}) vs Sancionado: "${candidato.nombre}"</span><br/>`;
-                                    
-                                    // Guardar en Firestore real
-                                    db.collection("alertas_pendientes").add({
-                                        nombre_socio: nombreSocio.toString(),
-                                        dni_socio: dniSocio.toString(),
-                                        nombre_repet_coincidente: candidato.nombre,
-                                        porcentaje_coincidencia: coincidencia.toFixed(0) + "%",
-                                        estado_resolucion: "Pendiente",
-                                        fecha_deteccion: new Date().toLocaleDateString()
-                                    }).then(() => {
-                                        logBox.innerHTML += `[OK] Alerta registrada en Firebase exitosamente.<br/>`;
-                                    });
-                                }
-                            });
-                        }
-                    });
-
-                    setTimeout(() => {
-                        statusText.innerText = "¡Procesamiento finalizado!";
-                        logBox.innerHTML += `<br/>[FIN] Cruce finalizado. Total de alertas generadas: ${alertasDetectadas}.`;
-                        if(alertasDetectadas > 0) {
-                            alert("Se detectaron " + alertasDetectadas + " coincidencia(s). Verifique la pestaña 'Alertas Activas'.");
-                        } else {
-                            alert("Planilla procesada con éxito. No se detectaron coincidencias.");
-                        }
-                    }, 1500);
-
-                } catch (error) {
-                    console.error(error);
-                    logBox.innerHTML += `<span style="color:#ef4444;">[ERROR] No se pudo procesar el archivo. Detalle: ${error.message}</span><br/>`;
-                }
-            };
-            reader.readAsArrayBuffer(file);
-        }
-
-        window.onload = function() {
-            escucharAlertas();
-        };
-    </script>
-</body>
-</html>
+                    tableBody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:#647
